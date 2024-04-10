@@ -36,9 +36,20 @@ def trace(
     use_spaces=False
 ):
     """
-    NOTE: Experimental feature. Modifies the AST. Use with caution.
-    Use as top-level decorator to print the state of variables in a function.
+    An experimental decorator for tracing function execution using AST.
+
+    Args:
+        variables (list, optional): Variables to trace. Traces all if None. Default is None.
+        args (bool, optional): Whether to print function arguments. Default is True.
+        result (bool, optional): Whether to print function return value. Default is False.
+        max_len (int, optional): Max length of printed values. Truncates if exceeded. Default is None.
+        verbose (bool, optional): Whether to print detailed trace info. Default is False.
+        use_spaces (bool, optional): Whether to add empty lines for readability. Default is False.
+
+    Returns:
+        function: Decorator for function tracing.
     """
+
     if max_len and not isinstance(max_len, int):
         raise ValueError("max_len must be an integer")
     
