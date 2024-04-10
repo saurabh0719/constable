@@ -1,6 +1,6 @@
 # ast_debug
 
-Just an experiment for lazy debugging. Supports **3.8+**
+Just an experiment for lazy debugging. Captures and prints each assignment to certain (or all) variables. Supports **3.8+**
 
 **Do not use** in production or other critical environments, the code relies on modifying the AST for debugging. 
 
