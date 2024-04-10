@@ -109,6 +109,7 @@ def trace(
         i = 1
         for node_to_insert in nodes_to_insert:
             node_to_insert.lineno = node.lineno + i
+            node_to_insert.col_offset = 0
             module.body[0].body.insert(
                 module.body[0].body.index(node) + i,
                 node_to_insert
