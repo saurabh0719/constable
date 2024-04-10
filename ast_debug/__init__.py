@@ -115,6 +115,10 @@ def trace(
                 node_to_insert
             )
             i += 1
+        
+        # Update line numbers of subsequent nodes
+        for next_node in module.body[0].body[module.body[0].body.index(node) + i:]:
+            next_node.lineno += i
 
     def insert_logs_into_module(module, func, variables):
         # Add a print statement after each assignment statement
