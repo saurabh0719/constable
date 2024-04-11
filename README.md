@@ -1,4 +1,6 @@
-# constable
+<p align="left">
+    <img src="https://github.com/saurabh0719/constable/assets/127945292/80cf03c8-af53-4161-9a47-b9acbc9bb413" width=500>
+</p>
 
 One decorator for lazy debugging. Inserts print statements directly into your AST. Supports **3.8+**
 
@@ -15,8 +17,11 @@ One decorator for lazy debugging. Inserts print statements directly into your AS
 $ pip install constable
 ```
 
+### How does it work?
 
-:exclamation: **Do not use** (use at your own risk) it in mission critical environments. The code relies on modifying the AST to insert prints and using `exec`. 
+To trace variables, the `trace` decorator reads the AST and inserts `print` statements directly into the tree after every assignment `=` op. Then it executes the function in a separate namespace using `exec`
+
+:exclamation: **Do not use** (use at your own risk) in mission-critical environments.
 
 
 ### Monitoring functions
