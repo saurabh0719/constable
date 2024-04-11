@@ -16,7 +16,7 @@ $ pip install constable
 ```
 
 
-**Do not use** (use at your own risk) it in mission critical environments. The code relies on modifying the AST for and using `exec` for debugging. 
+:exclamation: **Do not use** (use at your own risk) it in mission critical environments. The code relies on modifying the AST to insert prints and using `exec`. 
 
 
 ### Monitoring functions
