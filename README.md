@@ -1,6 +1,6 @@
 # constable
 
-One decorator for lazy debugging. Supports **3.8+**
+One decorator for lazy debugging. Inserts print statements directly into your AST. Supports **3.8+**
 
 - Capture function args and result
 
