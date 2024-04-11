@@ -2,11 +2,11 @@ import unittest
 from io import StringIO
 from contextlib import redirect_stdout
 
-import ast_debug
+import constable
 
 class TestDebugDecorator(unittest.TestCase):
-    def test_debug_decorator_does_not_change_behavior(self):
-        @ast_debug.trace(variables=['a', 'b', 'c'])
+    def test_decorator_does_not_change_behavior(self):
+        @constable.trace(variables=['a', 'b', 'c'])
         def complex_function(a, b, c):
             d = a + b
             e = b * c
@@ -16,8 +16,8 @@ class TestDebugDecorator(unittest.TestCase):
         with redirect_stdout(StringIO()):
             self.assertEqual(complex_function(1, 2, 3), (3, 6, -2))
 
-    def test_debug_decorator_output_count(self):
-        @ast_debug.trace(variables=['a', 'b'])
+    def test_decorator_output_count(self):
+        @constable.trace(variables=['a', 'b'])
         def add(a, b):
             a = a + 1
             b = b + 1

@@ -2,6 +2,8 @@ import ast
 import functools
 import inspect
 import textwrap
+import time as t
+
 
 __all__ = ['trace']
 
@@ -33,6 +35,7 @@ def trace(
     result=False,
     max_len=None,
     verbose=False,
+    time=True,
     use_spaces=False
 ):
     """
@@ -153,7 +156,15 @@ def trace(
 
             module = get_ast_module(func)
             insert_logs_into_module(module, func, variables)
+
+            start = t.time()
             ret = execute_function(module, func, *a, **k)
+            runtime = t.time() - start
+
+            if time:
+                prefix = f"{blue('execution time:')}"
+                prefix += f" {get_function_signature(func, arg_values)}"
+                print(f"{prefix} -> {runtime:.8f} seconds")
 
             if result:
                 prefix = f"{red('return:')} {yellow(trunc(ret, max_len))}"
