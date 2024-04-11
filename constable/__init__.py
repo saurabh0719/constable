@@ -47,6 +47,7 @@ def trace(
         result (bool, optional): Whether to print function return value. Default is False.
         max_len (int, optional): Max length of printed values. Truncates if exceeded. Default is None.
         verbose (bool, optional): Whether to print detailed trace info. Default is False.
+        time (bool, optional): Whether to print execution time. Default is True.
         use_spaces (bool, optional): Whether to add empty lines for readability. Default is False.
 
     Returns:

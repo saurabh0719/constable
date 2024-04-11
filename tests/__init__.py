@@ -28,4 +28,4 @@ class TestDebugDecorator(unittest.TestCase):
             add(1, 2)
         output = f.getvalue()
         num_lines = len(output.split('\n')) - 1 
-        self.assertEqual(num_lines, 3)
+        self.assertEqual(num_lines, 4)
