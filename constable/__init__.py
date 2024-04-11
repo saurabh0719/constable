@@ -62,8 +62,8 @@ def trace(
 
     def get_ast_module(func):
         source_code = textwrap.dedent(
-                '\n'.join(inspect.getsource(func).splitlines()[1:])
-            )
+            '\n'.join(inspect.getsource(func).splitlines()[1:])
+        )
         return ast.parse(source_code)
     
     def get_arg_values(func, *a, **k):
@@ -78,26 +78,24 @@ def trace(
     def debug_prefix(func):
         return f"{yellow('debug:')} {cyan(func.__name__)}"
 
-    def get_verbose_statements_to_insert(func, target, node):
-        source_code_lines = inspect.getsource(func).splitlines()
-        return [
-            f'print("{debug_prefix(func)}:")',
-            f'print({trunc(repr(source_code_lines[node.lineno].strip()), 30, True)})',
-            f'print("{green(target.id)}", green("="), green(trunc(str({target.id}), {max_len})))',
-        ]
-    
-    def get_statements_to_insert(func, target):
-        return [
-            f'print("{debug_prefix(func)}: {green(target.id)}", "=", trunc(str({target.id}), {max_len}))',
-        ]
+    def get_statements_to_insert(func, target, node, verbose=False):
+        if verbose:
+            source_code_lines = inspect.getsource(func).splitlines()
+            line = source_code_lines[node.lineno].strip()
+            return [
+                f'print("{debug_prefix(func)}:")',
+                f'print({trunc(repr(line), 30, True)})',
+                f'print("{green(target.id)}", green("="), green(trunc(str({target.id}), {max_len})))',
+            ]
+        else:
+            return [
+                f'print("{debug_prefix(func)}: {green(target.id)}", "=", trunc(str({target.id}), {max_len}))',
+            ]
 
     def get_nodes_to_insert(func, target, node):
         empty_print_node = ast.parse(f'print("")').body[0]
         nodes_to_insert = []
-        statements = (
-            get_verbose_statements_to_insert(func, target, node) if verbose
-            else get_statements_to_insert(func, target)
-        )
+        statements = get_statements_to_insert(func, target, node, verbose)
         for stmnt in statements:
             node_to_insert = ast.parse(stmnt).body[0]
             nodes_to_insert.append(node_to_insert)
