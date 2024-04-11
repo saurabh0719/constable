@@ -55,19 +55,19 @@ def do_something(a=5, b=6):
     a = c + b
     return a
 
-do_something(1, 2)
+do_something()
 
 ```
 
 Output -
 
 ```
-executing: do_something(a = 1, b = 2)
-debug: do_something: a = 3
+executing: do_something(a = 5, b = 6)
+debug: do_something: a = 11
 debug: do_something: a = Experimenting with the AST
-debug: do_something: b = 5
-debug: do_something: a = 8
-execution time: do_something(a = 1, b = 2) -> 0.00009584 seconds
+debug: do_something: b = 17
+debug: do_something: a = 28
+execution time: do_something(a = 5, b = 6) -> 0.00008297 seconds
 ```
 
 ### API
