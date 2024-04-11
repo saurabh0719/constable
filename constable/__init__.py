@@ -86,27 +86,24 @@ def trace(
             f'print("{green(target.id)}", green("="), green(trunc(str({target.id}), {max_len})))',
         ]
     
-    def get_statements_to_insert(func, target, node):
+    def get_statements_to_insert(func, target):
         return [
             f'print("{debug_prefix(func)}: {green(target.id)}", "=", trunc(str({target.id}), {max_len}))',
         ]
 
     def get_nodes_to_insert(func, target, node):
-        empty_line_node = ast.parse(f'print("")').body[0]
+        empty_print_node = ast.parse(f'print("")').body[0]
         nodes_to_insert = []
-        if use_spaces:
-            nodes_to_insert.append(empty_line_node)
-
-        fn = (
-            get_verbose_statements_to_insert if verbose else get_statements_to_insert
+        statements = (
+            get_verbose_statements_to_insert(func, target, node) if verbose
+            else get_statements_to_insert(func, target)
         )
-        statements = fn(func, target, node)
         for stmnt in statements:
             node_to_insert = ast.parse(stmnt).body[0]
             nodes_to_insert.append(node_to_insert)
 
-        if use_spaces:
-            nodes_to_insert.append(empty_line_node)
+        if use_spaces and nodes_to_insert:
+            nodes_to_insert = [empty_print_node] + nodes_to_insert + [empty_print_node]
         return nodes_to_insert
 
     def insert_nodes(module, nodes_to_insert, node):
