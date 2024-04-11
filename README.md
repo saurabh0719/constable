@@ -1,6 +1,6 @@
 # constable
 
-Just an experiment for lazy debugging. Supports **3.8+**
+Just an experiment for lazy debugging. Captures and prints each assignment to certain (or all) variables. Supports **3.8+**
 
 **Do not use** (use at your own risk) it in mission critical environments. The code relies on modifying the AST for and using `exec` for debugging. 
 
