@@ -2,7 +2,29 @@
     <img src="https://github.com/saurabh0719/constable/assets/127945292/80cf03c8-af53-4161-9a47-b9acbc9bb413" width=500>
 </p>
 
-One decorator for lazy debugging. Inserts print statements directly into your AST. Supports **3.8+**
+<hr>
+
+
+If you find yourself aimlessly adding :sparkles: `print` :sparkles: statements while debugging your code, this is for you. :handshake:
+
+Constable inserts print statements directly into the AST at runtime to print variable assignments and other details.
+
+It turns this 🔽 ....
+```python
+@constable.trace(['a', 'b'])
+def do_something(a=5, b=6):
+    a = a + b
+```
+.... into this 🔽 during runtime
+```python
+# During runtime, print statements will be added for every assignment on 'a' & 'b'.
+# Resulting in something like -
+def do_something(a=5, b=6):
+    a = a + b
+    print(f"debug: do_something: a = {a}")
+```
+
+### Key features
 
 - Capture function args and result
 
@@ -19,33 +41,11 @@ $ pip install constable
 
 ### How does it work?
 
-To trace variables, the `trace` decorator reads the AST and inserts `print` statements directly into the tree after every assignment `=` op. Then it executes the function in a separate namespace using `exec`
+The `trace` decorator uses Python's Abstract Syntax Tree (AST) in much the same way we add `print`(s) to debug states. During runtime, it prepares and inserts `print` statements into the function's AST after every assignment operation, and then executes the modified code in a separate namespace with `exec`.
 
-:exclamation: **Do not use** (use at your own risk) in mission-critical environments.
+:memo: Use at your own risk in mission-critical environments, or with unknown agents, as compiling and executing code during runtime can cause unwanted side effects. For all use cases that matter, use `pdb` instead.
 
-
-### Monitoring functions
-
-```python
-
-import constable
-
-@constable.trace()
-def add(a=1, b=2):
-    return a + b
-
-add(1, 2)
-
-```
-
-Output - 
-
-```
-executing: add(a = 1, b = 2)
-execution time: add(a = 1, b = 2) -> 0.00014877 seconds
-```
-
-### Tracing variable assignments 
+#### Tracing variable assignments 
 
 ```python
 
@@ -73,6 +73,28 @@ debug: do_something: a = Experimenting with the AST
 debug: do_something: b = 17
 debug: do_something: a = 28
 execution time: do_something(a = 5, b = 6) -> 0.00008297 seconds
+```
+
+
+#### Monitoring functions
+
+```python
+
+import constable
+
+@constable.trace()
+def add(a=1, b=2):
+    return a + b
+
+add(1, 2)
+
+```
+
+Output - 
+
+```
+executing: add(a = 1, b = 2)
+execution time: add(a = 1, b = 2) -> 0.00014877 seconds
 ```
 
 ### API
