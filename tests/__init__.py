@@ -20,7 +20,8 @@ class TestDebugDecorator(unittest.TestCase):
         @constable.trace(variables=['a', 'b'], verbose=True)
         def add(a, b):
             a = a + 1
-            b = b + 1
+            b: int = b + 1
+            a += 1
             return a + b
 
         f = StringIO()
@@ -28,4 +29,4 @@ class TestDebugDecorator(unittest.TestCase):
             add(1, 2)
         output = f.getvalue()
         num_lines = len(output.split('\n')) - 1 
-        self.assertEqual(num_lines, 8)
+        self.assertEqual(num_lines, 11)
