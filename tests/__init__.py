@@ -6,7 +6,7 @@ import constable
 
 class TestDebugDecorator(unittest.TestCase):
     def test_decorator_does_not_change_behavior(self):
-        @constable.trace(variables=['a', 'b', 'c'])
+        @constable.trace(variables=['a', 'b', 'c'], verbose=True)
         def complex_function(a, b, c):
             d = a + b
             e = b * c
@@ -17,7 +17,7 @@ class TestDebugDecorator(unittest.TestCase):
             self.assertEqual(complex_function(1, 2, 3), (3, 6, -2))
 
     def test_decorator_output_count(self):
-        @constable.trace(variables=['a', 'b'])
+        @constable.trace(variables=['a', 'b'], verbose=True)
         def add(a, b):
             a = a + 1
             b = b + 1
@@ -28,4 +28,4 @@ class TestDebugDecorator(unittest.TestCase):
             add(1, 2)
         output = f.getvalue()
         num_lines = len(output.split('\n')) - 1 
-        self.assertEqual(num_lines, 4)
+        self.assertEqual(num_lines, 8)
