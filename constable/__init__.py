@@ -163,9 +163,10 @@ class Executor:
 
     def execute(self):
         self.processor.insert_print_statements(self.variables)
+        module = self.processor.get_ast_module()
         start = t.perf_counter()
         # compile and execute
-        code = compile(self.module, filename='<ast>', mode='exec')
+        code = compile(module, filename='<ast>', mode='exec')
         global_vars = {**globals(), **locals(), **self.fn_wrapper.func.__globals__}
         namespace = {
             self.fn_wrapper.func.__name__: self.fn_wrapper.func,
