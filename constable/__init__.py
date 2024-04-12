@@ -39,16 +39,24 @@ class FunctionWrapper:
         self.func = func
         self.args = args if args is not None else ()
         self.kwargs = kwargs if kwargs is not None else {}
-        self.line_num_in_source = func.__code__.co_firstlineno
+        self.start_line_num = func.__code__.co_firstlineno
+        self.source_code_lines = inspect.getsource(func).splitlines()
+        self.func_def_offset = 0
+        for i in range(len(self.source_code_lines)):
+            line = self.source_code_lines[i].strip()
+            if line.startswith('def '):
+                # Python uses 1-based indexing for line nums, so add 1 to the index
+                self.func_def_offset = i + 1
+                break
+        self.end_line_num = self.start_line_num + len(self.source_code_lines) - 1
 
-    def get_signature(self, line_num=None):
+    def debug_prefix(self, line_num=None, to_line_num=None):
         signature = f"{self.func.__name__}"
         if line_num:
-            signature += f":{line_num}"
-        return signature
-
-    def debug_prefix(self, line_num=None):
-        return f"{yellow('constable.trace:')} {self.get_signature(line_num)} -"
+            signature += f": line {line_num}"
+        if to_line_num:
+            signature += f" to {to_line_num}"
+        return f"{blue('constable:')} {signature}"
 
 
 class AstProcessor:
@@ -78,21 +86,14 @@ class AstProcessor:
         return self.module
 
     def get_source_code_and_line_number(self, node_line_num) -> tuple:
-        # Source code will contain decorators, func def etc.
-        # Whereas lineno is the line num of the statement in the function
-        # So we need to find the line num of the statement inside source code
-        source_code_lines = inspect.getsource(self.fn_wrapper.func).splitlines()
-        func_def_lineno = 0
-        for i in range(len(source_code_lines)):
-            line = source_code_lines[i].strip()
-            if line.startswith('def '):
-                # Python uses 1-based indexing for line nums, so add 1 to the index
-                func_def_lineno = i + 1
-                break
-        line_index = func_def_lineno + node_line_num - 2
-        line = source_code_lines[line_index].strip()
-        line_num_in_source = self.fn_wrapper.line_num_in_source + node_line_num
-        return line, line_num_in_source
+        # source_code_lines will contain decorators, func def etc.
+        # func_def_offset is the line num of the function definition in the source code
+        # node_line_num is the line num of the statement in the function
+        # we need to find the line num of the statement inside source code
+        line_index = self.fn_wrapper.func_def_offset + node_line_num - 2
+        line = self.fn_wrapper.source_code_lines[line_index].strip()
+        start_line_num = self.fn_wrapper.start_line_num + node_line_num
+        return line, start_line_num
 
     def get_statements_to_insert(self, target, node):
         line, line_num = self.get_source_code_and_line_number(node.lineno)
@@ -106,7 +107,7 @@ class AstProcessor:
             ]
         else:
             return [
-                f'print("{debug_prefix} {green(target.id)}", green("="), green(trunc(str({target.id}), {self.max_len})))',
+                f'print("{debug_prefix} - {green(target.id)}", green("="), green(trunc(str({target.id}), {self.max_len})))',
             ]
 
     def get_nodes_to_insert(self, target, node):
@@ -163,7 +164,11 @@ class Executor:
         self.max_len = processor.max_len
 
     def print_execution_info(self, result, runtime):
-        print(f"\n{self.fn_wrapper.debug_prefix()}")
+        debug_prefix = self.fn_wrapper.debug_prefix(
+            self.fn_wrapper.start_line_num,
+            self.fn_wrapper.end_line_num
+        )
+        print(f"\n{debug_prefix}")
         print(f"    args: {green(self.fn_wrapper.args)}")
         print(f"    kwargs: {green(self.fn_wrapper.kwargs)}")
         print(f"    returned: {green(trunc(result, self.max_len))}")
@@ -190,7 +195,7 @@ class Executor:
 
 
 def trace(
-    variables=None,
+    *variables,
     exec_info=True,
     verbose=True,
     use_spaces=True,
@@ -200,7 +205,7 @@ def trace(
     An experimental decorator for tracing function execution using AST.
 
     Args:
-        variables (list, optional): Variables to trace. Traces all if None.
+        variables (list): List of variable names to trace.
         exec_info (bool, optional): Whether to print execution info.
         verbose (bool, optional): Whether to print detailed trace info.
         use_spaces (bool, optional): Whether to add empty lines for readability.
@@ -212,9 +217,6 @@ def trace(
 
     if max_len and not isinstance(max_len, int):
         raise ValueError("max_len must be an integer")
-    
-    if variables is None:
-        variables = []
 
     def decorator(func):
 

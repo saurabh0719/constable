@@ -11,7 +11,7 @@ Constable inserts print statements directly into the AST at runtime to print var
 
 It turns this 🔽 ....
 ```python
-@constable.trace(['a', 'b'])
+@constable.trace('a', 'b')
 def do_something(a, b):
     a = a + b
 ```
@@ -41,7 +41,7 @@ The `constable.trace` decorator uses Python's Abstract Syntax Tree (AST) in much
 ```python
 import constable
 
-@constable.trace(['a', 'b'])
+@constable.trace('a', 'b')
 def example(a, b):
     a = a + b
     c = a
@@ -56,36 +56,38 @@ example(5, 6)
 Output -
 
 ```
-constable.trace: example:19 -
+constable: example: line 5
     a = a + b
     a = 11
     type(a) = <class 'int'>
 
-constable.trace: example:21 -
+constable: example: line 7
     a = "Experimenting with the AST"
     a = Experimenting with the AST
     type(a) = <class 'str'>
 
-constable.trace: example:22 -
+constable: example: line 8
     b = c + b
     b = 17
     type(b) = <class 'int'>
 
-constable.trace: example:23 -
+constable: example: line 9
     a = c + b
     a = 28
     type(a) = <class 'int'>
 
-constable.trace: example -
+constable: example: line 3 to 10
     args: (5, 6)
     kwargs: {}
     returned: 28
-    execution time: 0.00029278 seconds
+    execution time: 0.00018480 seconds
 ```
 
 You can also use it on its own to track function execution info. 
 
 ```python
+import constable
+
 @constable.trace()
 def add(a, b):
     return a + b
@@ -96,11 +98,11 @@ add(5, 6)
 Output - 
 
 ```
-constable.trace: add -
+constable: add: line 3 to 5
     args: (5, 6)
     kwargs: {}
     returned: 11
-    execution time: 0.00003767 seconds
+    execution time: 0.00004312 seconds
 ```
 
 
@@ -110,21 +112,21 @@ The `trace` function is the decorator to add `print` statements into the AST.
 ```python
 
 def trace(
-    variables=None,
+    *variables,
     exec_info=True,
     verbose=True,
     use_spaces=True,
-    max_len=None
+    max_len=None,
 ):
     """
     An experimental decorator for tracing function execution using AST.
 
     Args:
-        variables (list, optional): Variables to trace. Traces all if None. Default is None.
-        exec_info (bool, optional): Whether to print function execution info. Default is True.
-        verbose (bool, optional): Whether to print detailed trace info. Default is False.
-        use_spaces (bool, optional): Whether to add empty lines for readability. Default is False.
-        max_len (int, optional): Max length of printed values. Truncates if exceeded. Default is None.
+        variables (list): List of variable names to trace.
+        exec_info (bool, optional): Whether to print execution info.
+        verbose (bool, optional): Whether to print detailed trace info.
+        use_spaces (bool, optional): Whether to add empty lines for readability.
+        max_len (int, optional): Max length of printed values. Truncates if exceeded.
 
     Returns:
         function: Decorator for function tracing.

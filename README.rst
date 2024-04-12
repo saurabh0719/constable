@@ -23,13 +23,13 @@ Usage :
 ~~~~~~~~~~~~~
 
 
-Monitoring functions
+Tracking variables in a function
 
 .. code:: python
 
     import constable
 
-    @constable.trace(['a', 'b'])
+    @constable.trace('a', 'b')
     def example(a, b):
         a = a + b
         c = a
@@ -45,28 +45,51 @@ Output :
 
 ::
 
-    constable.trace: example:19 -
+    constable: example: line 5
         a = a + b
         a = 11
         type(a) = <class 'int'>
 
-    constable.trace: example:21 -
+    constable: example: line 7
         a = "Experimenting with the AST"
         a = Experimenting with the AST
         type(a) = <class 'str'>
 
-    constable.trace: example:22 -
+    constable: example: line 8
         b = c + b
         b = 17
         type(b) = <class 'int'>
 
-    constable.trace: example:23 -
+    constable: example: line 9
         a = c + b
         a = 28
         type(a) = <class 'int'>
 
-    constable.trace: example -
+    constable: example: line 3 to 10
         args: (5, 6)
         kwargs: {}
         returned: 28
-        execution time: 0.00029278 seconds
+        execution time: 0.00018480 seconds
+
+
+Monitor functions
+
+.. code:: python
+
+    import constable
+
+    @constable.trace()
+    def add(a, b):
+        return a + b
+
+    add(5, 6)
+
+Output :
+
+::
+
+    constable: add: line 3 to 5
+        args: (5, 6)
+        kwargs: {}
+        returned: 11
+        execution time: 0.00004312 seconds
