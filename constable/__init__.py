@@ -7,6 +7,7 @@ import time as t
 
 __all__ = ['trace']
 
+
 yellow = lambda x: f"\033[93m{x}\033[0m"
 green = lambda x: f"\033[92m{x}\033[0m"
 cyan = lambda x: f"\033[96m{x}\033[0m"
@@ -30,12 +31,135 @@ def trunc(s: str, max_len: int, dot=False):
     return s
 
 
+class FunctionWrapper:
+    def __init__(self, func, args=None, kwargs=None):
+        self.func = func
+        self.args = args if args is not None else ()
+        self.kwargs = kwargs if kwargs is not None else {}
+        self.line_num_in_source = func.__code__.co_firstlineno
+
+    def get_signature(self, line_num=None):
+        signature = f"{self.func.__name__}"
+        if line_num:
+            signature += f":{line_num}"
+        return signature
+
+    def debug_prefix(self, line_num=None):
+        return f"{yellow('constable.trace:')} {self.get_signature(line_num)} -"
+
+
+class AstProcessor:
+    def __init__(self, fn_wrapper: FunctionWrapper, verbose=True, use_spaces=True, max_len=None):
+        self.fn_wrapper = fn_wrapper
+        self.max_len = max_len
+        self.use_spaces = use_spaces
+        self.verbose = verbose
+        self.module = None
+
+    def get_ast_module(self):
+        if self.module is not None:
+            return self.module
+        source_code = textwrap.dedent(
+            '\n'.join(inspect.getsource(self.fn_wrapper.func).splitlines()[1:])
+        )
+        self.module = ast.parse(source_code)
+        return self.module
+
+    def get_source_code_and_line_number(self, node_line_num) -> tuple:
+        # Source code will contain decorators, func def etc.
+        # Whereas lineno is the line num of the statement in the function
+        # So we need to find the line num of the statement inside source code
+        source_code_lines = inspect.getsource(self.fn_wrapper.func).splitlines()
+        func_def_lineno = 0
+        for i in range(len(source_code_lines)):
+            line = source_code_lines[i].strip()
+            if line.startswith('def '):
+                # Python uses 1-based indexing for line nums, so add 1 to the index
+                func_def_lineno = i + 1
+                break
+        line_index = func_def_lineno + node_line_num - 2
+        line = source_code_lines[line_index].strip()
+        line_num_in_source = self.fn_wrapper.line_num_in_source + node_line_num
+        return line, line_num_in_source
+
+    def get_statements_to_insert(self, target, node):
+        line, line_num = self.get_source_code_and_line_number(node.lineno)
+        debug_prefix = self.fn_wrapper.debug_prefix(line_num=line_num)
+        if self.verbose:
+            return [
+                f'print("{debug_prefix}")',
+                f'print("   ", {trunc(repr(line), 80, True)})',
+                f'print("    {target.id} =", green(trunc(str({target.id}), {self.max_len})))',
+                f'print("    type({target.id}) =", green(str(type({target.id}))))',
+            ]
+        else:
+            return [
+                f'print("{debug_prefix} {green(target.id)}", green("="), green(trunc(str({target.id}), {self.max_len})))',
+            ]
+
+    def get_nodes_to_insert(self, target, node):
+        empty_print_node = ast.parse(f'print("")').body[0]
+        nodes_to_insert = [empty_print_node] if self.use_spaces else []
+        statements = self.get_statements_to_insert(target, node)
+        for stmnt in statements:
+            node_to_insert = ast.parse(stmnt).body[0]
+            nodes_to_insert.append(node_to_insert)
+        return nodes_to_insert
+
+    def insert_nodes(self, nodes_to_insert, node):
+        i = 1
+        module = self.get_ast_module()
+        for node_to_insert in nodes_to_insert:
+            node_to_insert.lineno = node.lineno + i
+            node_to_insert.end_lineno = node.lineno + i
+            node_to_insert.col_offset = 0
+            module.body[0].body.insert(
+                module.body[0].body.index(node) + i,
+                node_to_insert
+            )
+            i += 1
+
+    def insert_print_statements(self, targets, node, variables):
+        for target in targets:
+            if isinstance(target, ast.Name) and target.id in variables:
+                nodes_to_insert = self.get_nodes_to_insert(target, node)
+                self.insert_nodes(nodes_to_insert, node)
+
+    def process(self, variables):
+        # Add a print statement after each assignment statement
+        module = self.get_ast_module()
+        for node in module.body[0].body:
+            # skip any statement apart from assignment
+            if not isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+                continue
+            targets = []
+            # a = 5
+            if isinstance(node, ast.Assign):
+                targets = node.targets
+            # a: int = 5 or a += 5
+            elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
+                targets = [node.target]
+
+            self.insert_print_statements(targets, node, variables)
+
+    def execute(self):
+        code = compile(self.module, filename='<ast>', mode='exec')
+        global_vars = {**globals(), **locals(), **self.fn_wrapper.func.__globals__}
+        namespace = {
+            self.fn_wrapper.func.__name__: self.fn_wrapper.func,
+            **global_vars
+        }
+        exec(code, namespace)
+        fn = namespace[self.fn_wrapper.func.__name__]
+        return fn(*self.fn_wrapper.args, **self.fn_wrapper.kwargs)
+
+
 def trace(
     variables=None,
     exec_info=True,
     verbose=True,
     use_spaces=True,
-    max_len=None
+    max_len=None,
 ):
     """
     An experimental decorator for tracing function execution using AST.
@@ -57,121 +181,25 @@ def trace(
     if variables is None:
         variables = []
 
-    def get_ast_module(func):
-        source_code = textwrap.dedent(
-            '\n'.join(inspect.getsource(func).splitlines()[1:])
-        )
-        return ast.parse(source_code)
-    
-    def get_arg_values(func, *a, **k):
-        keyword_arguments = inspect.getcallargs(func, *a, **k)
-        return ", ".join([
-            f"{green(k)} = {trunc(v, max_len)}" for k, v in keyword_arguments.items()
-        ])
-    
-    def get_function_signature(func, with_args=True):
-        signature = f"{cyan(func.__name__)}"
-        if with_args:
-            arg_values = get_arg_values(func)
-            signature += f"({arg_values})"
-        return signature
-
-    def debug_prefix(func):
-        return f"{yellow('debug:')} {get_function_signature(func, False)}"
-    
-    def get_source_code_line(func, lineno):
-        source_code_lines = inspect.getsource(func).splitlines()
-
-        # Source code will contain decorators, func def etc.
-        # Whereas lineno is the line number of the statement in the function
-        # So we need to find the line number of the statement inside source code
-        func_def_lineno = 0
-        for i in range(len(source_code_lines)):
-            line = source_code_lines[i].strip()
-            if line.startswith('def '):
-                # Python uses 1-based indexing for line numbers, so add 1 to the index
-                func_def_lineno = i + 1
-                break
-
-        line_index = func_def_lineno + lineno - 2
-        line = source_code_lines[line_index].strip()
-        return line
-
-    def get_statements_to_insert(func, target, node, verbose=False):
-        if verbose:
-            line = get_source_code_line(func, node.lineno)
-            return [
-                f'print("{debug_prefix(func)}:")',
-                f'print("-->", {trunc(repr(line), 30, True)})',
-                f'print("--> {green(target.id)}", green("="), green(trunc(str({target.id}), {max_len})))',
-            ]
-        else:
-            return [
-                f'print("{debug_prefix(func)}: {green(target.id)}", "=", trunc(str({target.id}), {max_len}))',
-            ]
-
-    def get_nodes_to_insert(func, target, node):
-        empty_print_node = ast.parse(f'print("")').body[0]
-        nodes_to_insert = [empty_print_node] if use_spaces else []
-        statements = get_statements_to_insert(func, target, node, verbose)
-        for stmnt in statements:
-            node_to_insert = ast.parse(stmnt).body[0]
-            nodes_to_insert.append(node_to_insert)
-        return nodes_to_insert
-
-    def insert_nodes(module, nodes_to_insert, node):
-        i = 1
-        for node_to_insert in nodes_to_insert:
-            node_to_insert.lineno = node.lineno + i
-            node_to_insert.end_lineno = node.lineno + i
-            node_to_insert.col_offset = 0
-            module.body[0].body.insert(
-                module.body[0].body.index(node) + i,
-                node_to_insert
-            )
-            i += 1
-
-    def insert_logs_into_module(module, func, variables):
-        # Add a print statement after each assignment statement
-        for node in module.body[0].body:
-            # skip any statement apart from assignment
-            if not isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
-                continue
-            targets = []
-            # a = 5
-            if isinstance(node, ast.Assign):
-                targets = node.targets
-            # a: int = 5 or a += 5
-            elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
-                targets = [node.target]
-
-            for target in targets:
-                if isinstance(target, ast.Name) and target.id in variables:
-                    nodes_to_insert = get_nodes_to_insert(
-                        func, target, node)
-                    insert_nodes(module, nodes_to_insert, node)
-    
-    def execute_function(module, func, *a, **k):
-        code = compile(module, filename='<ast>', mode='exec')
-        global_vars = {**globals(), **locals(), **func.__globals__}
-        namespace = {func.__name__: func, **global_vars}
-        exec(code, namespace)
-        return namespace[func.__name__](*a, **k)
-    
     def decorator(func):
-        @functools.wraps(func)
-        def wrapper(*a, **k):
-            module = get_ast_module(func)
-            insert_logs_into_module(module, func, variables)
 
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            fn_wrapper = FunctionWrapper(func, args, kwargs)
+            processor = AstProcessor(fn_wrapper, verbose, use_spaces, max_len)
+            # Process the AST to insert print statements
+            processor.process(variables)
+            # Execute the function
             start = t.time()
-            ret = execute_function(module, func, *a, **k)
+            ret = processor.execute()
             runtime = t.time() - start
 
             if exec_info:
-                print(f"\n{blue('executed:')} {get_function_signature(func, True)}")
-                print(f"--> {blue('time:')} {yellow(f'{runtime:.8f} seconds')}")
-                print(f"--> {blue('returned:')}: {yellow(trunc(ret, max_len))}")
+                print(f"\n{fn_wrapper.debug_prefix()}")
+                print(f"    args: {green(args)}")
+                print(f"    kwargs: {green(kwargs)}")
+                print(f"    returned: {green(trunc(ret, max_len))}")
+                print(f"    execution time: {green(f'{runtime:.8f} seconds')}\n")
             
             return ret
 
