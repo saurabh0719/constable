@@ -39,6 +39,7 @@ The `constable.trace` decorator uses Python's Abstract Syntax Tree (AST) in much
 #### Print variable assignments and execution info.
 
 <span id="example"></span>
+
 Monitor the state of specified variables at each assignment operation with a step-by-step view of variable changes!
 
 ```python
