@@ -7,7 +7,7 @@ View the `Github repository <https://github.com/saurabh0719/constable>`__ and th
 
 
 How does it work?
-------------------
+~~~~~~~~~~~~~~~~~~
 
 The `constable.trace` decorator uses Python's Abstract Syntax Tree (AST) in much the same way we add `print`(s) to debug states. During runtime, it prepares and inserts `print` statements into the function's AST after every assignment operation (`ast.Assign`, `ast.AugAssign` and `ast.AnnAssign`), and then executes the modified code in a separate namespace with `exec`.
 
