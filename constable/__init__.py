@@ -80,12 +80,11 @@ def trace(
     
     def get_source_code_line(func, lineno):
         source_code_lines = inspect.getsource(func).splitlines()
-        func_def_lineno = 0
 
         # Source code will contain decorators, func def etc.
         # Whereas lineno is the line number of the statement in the function
         # So we need to find the line number of the statement inside source code
-        
+        func_def_lineno = 0
         for i in range(len(source_code_lines)):
             line = source_code_lines[i].strip()
             if line.startswith('def '):
@@ -138,9 +137,17 @@ def trace(
         # Add a print statement after each assignment statement
         for node in module.body[0].body:
             # skip any statement apart from assignment
-            if not isinstance(node, ast.Assign):
+            if not isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
                 continue
-            for target in node.targets:
+            targets = []
+            # a = 5
+            if isinstance(node, ast.Assign):
+                targets = node.targets
+            # a: int = 5 or a += 5
+            elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
+                targets = [node.target]
+
+            for target in targets:
                 if isinstance(target, ast.Name) and target.id in variables:
                     nodes_to_insert = get_nodes_to_insert(
                         func, target, node)
