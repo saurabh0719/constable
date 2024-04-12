@@ -77,15 +77,33 @@ def trace(
 
     def debug_prefix(func):
         return f"{yellow('debug:')} {cyan(func.__name__)}"
+    
+    def get_source_code_line(func, lineno):
+        source_code_lines = inspect.getsource(func).splitlines()
+        func_def_lineno = 0
+
+        # Source code will contain decorators, func def etc.
+        # Whereas lineno is the line number of the statement in the function
+        # So we need to find the line number of the statement inside source code
+        
+        for i in range(len(source_code_lines)):
+            line = source_code_lines[i].strip()
+            if line.startswith('def '):
+                # Python uses 1-based indexing for line numbers, so add 1 to the index
+                func_def_lineno = i + 1
+                break
+
+        line_index = func_def_lineno + lineno - 2
+        line = source_code_lines[line_index].strip()
+        return line
 
     def get_statements_to_insert(func, target, node, verbose=False):
         if verbose:
-            source_code_lines = inspect.getsource(func).splitlines()
-            line = source_code_lines[node.lineno].strip()
+            line = get_source_code_line(func, node.lineno)
             return [
                 f'print("{debug_prefix(func)}:")',
-                f'print({trunc(repr(line), 30, True)})',
-                f'print("{green(target.id)}", green("="), green(trunc(str({target.id}), {max_len})))',
+                f'print("->", {trunc(repr(line), 30, True)})',
+                f'print("-> {green(target.id)}", green("="), green(trunc(str({target.id}), {max_len})))',
             ]
         else:
             return [
@@ -115,11 +133,6 @@ def trace(
                 node_to_insert
             )
             i += 1
-        
-        # Update line numbers of subsequent nodes
-        for next_node in module.body[0].body[module.body[0].body.index(node) + i:]:
-            next_node.lineno += i
-            next_node.end_lineno += i
 
     def insert_logs_into_module(module, func, variables):
         # Add a print statement after each assignment statement
