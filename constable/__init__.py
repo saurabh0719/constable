@@ -49,7 +49,13 @@ class FunctionWrapper:
 
 
 class AstProcessor:
-    def __init__(self, fn_wrapper: FunctionWrapper, verbose=True, use_spaces=True, max_len=None):
+    def __init__(
+        self,
+        fn_wrapper: FunctionWrapper,
+        verbose=True,
+        use_spaces=True,
+        max_len=None
+    ):
         self.fn_wrapper = fn_wrapper
         self.max_len = max_len
         self.use_spaces = use_spaces
@@ -119,14 +125,7 @@ class AstProcessor:
             )
             i += 1
 
-    def insert_print_statements(self, targets, node, variables):
-        for target in targets:
-            if isinstance(target, ast.Name) and target.id in variables:
-                nodes_to_insert = self.get_nodes_to_insert(target, node)
-                self.insert_nodes(nodes_to_insert, node)
-
-    def process(self, variables):
-        # Add a print statement after each assignment statement
+    def insert_print_statements(self, variables):
         module = self.get_ast_module()
         for node in module.body[0].body:
             # skip any statement apart from assignment
@@ -140,9 +139,32 @@ class AstProcessor:
             elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
                 targets = [node.target]
 
-            self.insert_print_statements(targets, node, variables)
+            for target in targets:
+                if isinstance(target, ast.Name) and target.id in variables:
+                    nodes_to_insert = self.get_nodes_to_insert(target, node)
+                    self.insert_nodes(nodes_to_insert, node)
+
+
+class Executor:
+    def __init__(self, processor: AstProcessor, variables: list, exec_info=True):
+        self.processor = processor
+        self.exec_info = exec_info
+        self.variables = variables
+        self.fn_wrapper = processor.fn_wrapper
+        self.max_len = processor.max_len
+        self.module = processor.get_ast_module()
+
+    def print_execution_info(self, result, runtime):
+        print(f"\n{self.fn_wrapper.debug_prefix()}")
+        print(f"    args: {green(self.fn_wrapper.args)}")
+        print(f"    kwargs: {green(self.fn_wrapper.kwargs)}")
+        print(f"    returned: {green(trunc(result, self.max_len))}")
+        print(f"    execution time: {green(f'{runtime:.8f} seconds')}\n")
 
     def execute(self):
+        self.processor.insert_print_statements(self.variables)
+        start = t.perf_counter()
+        # compile and execute
         code = compile(self.module, filename='<ast>', mode='exec')
         global_vars = {**globals(), **locals(), **self.fn_wrapper.func.__globals__}
         namespace = {
@@ -151,7 +173,11 @@ class AstProcessor:
         }
         exec(code, namespace)
         fn = namespace[self.fn_wrapper.func.__name__]
-        return fn(*self.fn_wrapper.args, **self.fn_wrapper.kwargs)
+        result = fn(*self.fn_wrapper.args, **self.fn_wrapper.kwargs)
+        runtime = t.perf_counter() - start
+        if self.exec_info:
+            self.print_execution_info(result, runtime)
+        return result
 
 
 def trace(
@@ -165,11 +191,11 @@ def trace(
     An experimental decorator for tracing function execution using AST.
 
     Args:
-        variables (list, optional): Variables to trace. Traces all if None. Default is None.
-        exec_info (bool, optional): Whether to print execution info. Default is True.
-        verbose (bool, optional): Whether to print detailed trace info. Default is False.
-        use_spaces (bool, optional): Whether to add empty lines for readability. Default is False.
-        max_len (int, optional): Max length of printed values. Truncates if exceeded. Default is None.
+        variables (list, optional): Variables to trace. Traces all if None.
+        exec_info (bool, optional): Whether to print execution info.
+        verbose (bool, optional): Whether to print detailed trace info.
+        use_spaces (bool, optional): Whether to add empty lines for readability.
+        max_len (int, optional): Max length of printed values. Truncates if exceeded.
 
     Returns:
         function: Decorator for function tracing.
@@ -187,20 +213,8 @@ def trace(
         def wrapper(*args, **kwargs):
             fn_wrapper = FunctionWrapper(func, args, kwargs)
             processor = AstProcessor(fn_wrapper, verbose, use_spaces, max_len)
-            # Process the AST to insert print statements
-            processor.process(variables)
-            # Execute the function
-            start = t.time()
-            ret = processor.execute()
-            runtime = t.time() - start
-
-            if exec_info:
-                print(f"\n{fn_wrapper.debug_prefix()}")
-                print(f"    args: {green(args)}")
-                print(f"    kwargs: {green(kwargs)}")
-                print(f"    returned: {green(trunc(ret, max_len))}")
-                print(f"    execution time: {green(f'{runtime:.8f} seconds')}\n")
-            
+            executor = Executor(processor, variables, exec_info)
+            ret = executor.execute()
             return ret
 
         return wrapper
