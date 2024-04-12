@@ -67,37 +67,26 @@ do_something()
 Output -
 
 ```
-executing: do_something(a = 5, b = 6)
-debug: do_something: a = 11
-debug: do_something: a = Experimenting with the AST
-debug: do_something: b = 17
-debug: do_something: a = 28
-execution time: do_something(a = 5, b = 6) -> 0.00008297 seconds
+debug: do_something:
+--> a = a + b
+--> a = 11
+
+debug: do_something:
+--> a = "Experimenting with the A...
+--> a = Experimenting with the AST
+
+debug: do_something:
+--> b = c + b
+--> b = 17
+
+debug: do_something:
+--> a = c + b
+--> a = 28
+
+executed: do_something(a = 5, b = 6)
+--> time: 0.00013328 seconds
+--> returned:: 28
 ```
-
-
-#### Monitoring functions
-
-```python
-
-import constable
-
-@constable.trace()
-def add(a=1, b=2):
-    return a + b
-
-add(1, 2)
-
-```
-
-Output - 
-
-```
-executing: add(a = 1, b = 2)
-execution time: add(a = 1, b = 2) -> 0.00014877 seconds
-```
-
-### API
 
 The `trace` function is the decorator to add prints to the AST.
 
@@ -105,24 +94,20 @@ The `trace` function is the decorator to add prints to the AST.
 
 def trace(
     variables=None,
-    args=True,
-    result=False,
-    max_len=None,
-    verbose=False,
-    time=True,
-    use_spaces=False
+    exec_info=True,
+    verbose=True,
+    use_spaces=True,
+    max_len=None
 ):
     """
     An experimental decorator for tracing function execution using AST.
 
     Args:
         variables (list, optional): Variables to trace. Traces all if None. Default is None.
-        args (bool, optional): Whether to print function arguments. Default is True.
-        result (bool, optional): Whether to print function return value. Default is False.
-        max_len (int, optional): Max length of printed values. Truncates if exceeded. Default is None.
+        exec_info (bool, optional): Whether to print execution info. Default is True.
         verbose (bool, optional): Whether to print detailed trace info. Default is False.
-        time (bool, optional): Whether to print execution time. Default is True.
         use_spaces (bool, optional): Whether to add empty lines for readability. Default is False.
+        max_len (int, optional): Max length of printed values. Truncates if exceeded. Default is None.
 
     Returns:
         function: Decorator for function tracing.

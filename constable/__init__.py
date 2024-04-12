@@ -18,8 +18,9 @@ def trunc(s: str, max_len: int, dot=False):
     """
     Keep this outside scope of the decorator because it's used in the AST.
     """
-    if max_len is None:
+    if not s or max_len is None:
         return s
+    
     s = str(s)
     if len(s) > max_len:
         if dot:
@@ -31,24 +32,20 @@ def trunc(s: str, max_len: int, dot=False):
 
 def trace(
     variables=None,
-    args=True,
-    result=False,
-    max_len=None,
-    verbose=False,
-    time=True,
-    use_spaces=False
+    exec_info=True,
+    verbose=True,
+    use_spaces=True,
+    max_len=None
 ):
     """
     An experimental decorator for tracing function execution using AST.
 
     Args:
         variables (list, optional): Variables to trace. Traces all if None. Default is None.
-        args (bool, optional): Whether to print function arguments. Default is True.
-        result (bool, optional): Whether to print function return value. Default is False.
-        max_len (int, optional): Max length of printed values. Truncates if exceeded. Default is None.
+        exec_info (bool, optional): Whether to print execution info. Default is True.
         verbose (bool, optional): Whether to print detailed trace info. Default is False.
-        time (bool, optional): Whether to print execution time. Default is True.
         use_spaces (bool, optional): Whether to add empty lines for readability. Default is False.
+        max_len (int, optional): Max length of printed values. Truncates if exceeded. Default is None.
 
     Returns:
         function: Decorator for function tracing.
@@ -72,11 +69,15 @@ def trace(
             f"{green(k)} = {trunc(v, max_len)}" for k, v in keyword_arguments.items()
         ])
     
-    def get_function_signature(func, arg_values):
-        return f"{cyan(func.__name__)}({arg_values})"
+    def get_function_signature(func, with_args=True):
+        signature = f"{cyan(func.__name__)}"
+        if with_args:
+            arg_values = get_arg_values(func)
+            signature += f"({arg_values})"
+        return signature
 
     def debug_prefix(func):
-        return f"{yellow('debug:')} {cyan(func.__name__)}"
+        return f"{yellow('debug:')} {get_function_signature(func, False)}"
     
     def get_source_code_line(func, lineno):
         source_code_lines = inspect.getsource(func).splitlines()
@@ -101,8 +102,8 @@ def trace(
             line = get_source_code_line(func, node.lineno)
             return [
                 f'print("{debug_prefix(func)}:")',
-                f'print("->", {trunc(repr(line), 30, True)})',
-                f'print("-> {green(target.id)}", green("="), green(trunc(str({target.id}), {max_len})))',
+                f'print("-->", {trunc(repr(line), 30, True)})',
+                f'print("--> {green(target.id)}", green("="), green(trunc(str({target.id}), {max_len})))',
             ]
         else:
             return [
@@ -111,14 +112,11 @@ def trace(
 
     def get_nodes_to_insert(func, target, node):
         empty_print_node = ast.parse(f'print("")').body[0]
-        nodes_to_insert = []
+        nodes_to_insert = [empty_print_node] if use_spaces else []
         statements = get_statements_to_insert(func, target, node, verbose)
         for stmnt in statements:
             node_to_insert = ast.parse(stmnt).body[0]
             nodes_to_insert.append(node_to_insert)
-
-        if use_spaces and nodes_to_insert:
-            nodes_to_insert = [empty_print_node] + nodes_to_insert + [empty_print_node]
         return nodes_to_insert
 
     def insert_nodes(module, nodes_to_insert, node):
@@ -161,15 +159,8 @@ def trace(
         return namespace[func.__name__](*a, **k)
     
     def decorator(func):
-
         @functools.wraps(func)
         def wrapper(*a, **k):
-            if args or result:
-                arg_values = get_arg_values(func, *a, **k)
-
-            if args:
-                print(f"{red('executing:')} {get_function_signature(func, arg_values)}")
-
             module = get_ast_module(func)
             insert_logs_into_module(module, func, variables)
 
@@ -177,16 +168,12 @@ def trace(
             ret = execute_function(module, func, *a, **k)
             runtime = t.time() - start
 
-            if time:
-                prefix = f"{blue('execution time:')}"
-                prefix += f" {get_function_signature(func, arg_values)}"
-                print(f"{prefix} -> {runtime:.8f} seconds")
-
-            if result:
-                prefix = f"{red('return:')} {yellow(trunc(ret, max_len))}"
-                print(f"{prefix} [{get_function_signature(func, arg_values)}]")
+            if exec_info:
+                print(f"\n{blue('executed:')} {get_function_signature(func, True)}")
+                print(f"--> {blue('time:')} {yellow(f'{runtime:.8f} seconds')}")
+                print(f"--> {blue('returned:')}: {yellow(trunc(ret, max_len))}")
+            
             return ret
 
         return wrapper
-    
     return decorator
