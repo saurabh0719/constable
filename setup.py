@@ -6,7 +6,7 @@ long_description = pathlib.Path("README.rst").read_text()
 setup(
     name="constable",
     packages=["constable"],
-    version="0.0.1",
+    version="0.3.0",
     license="MIT",
     description="One decorator for lazy debugging. Inserts print statements directly into your AST.",
     long_description=long_description,
