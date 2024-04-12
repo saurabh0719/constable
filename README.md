@@ -24,7 +24,7 @@ def do_something(a, b):
     print(f"wowww i wonder who put this print here! a = {a}")
 ```
 
-Monitor the state of specified variables at each assignment operation, providing a step-by-step view of variable changes!
+See the [examples](#example) below
 
 ```sh
 $ pip install constable
@@ -37,6 +37,9 @@ The `constable.trace` decorator uses Python's Abstract Syntax Tree (AST) in much
 :memo: Use at your own risk in mission-critical environments, or with unknown agents, as compiling and executing code during runtime can cause unwanted side effects. For all use cases that matter, use `pdb` instead.
 
 #### Print variable assignments and execution info.
+
+<span id="example"></span>
+Monitor the state of specified variables at each assignment operation with a step-by-step view of variable changes!
 
 ```python
 import constable
