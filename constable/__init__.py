@@ -32,6 +32,9 @@ def trunc(s: str, max_len: int, dot=False):
 
 
 class FunctionWrapper:
+    """
+    Wraps a function along with its arguments and provides utility methods.
+    """
     def __init__(self, func, args=None, kwargs=None):
         self.func = func
         self.args = args if args is not None else ()
@@ -49,6 +52,9 @@ class FunctionWrapper:
 
 
 class AstProcessor:
+    """
+    Processes the AST of a function and inserts print statements for debugging.
+    """
     def __init__(
         self,
         fn_wrapper: FunctionWrapper,
@@ -146,13 +152,15 @@ class AstProcessor:
 
 
 class Executor:
+    """
+    Executes and times function after inserting print statements
+    """
     def __init__(self, processor: AstProcessor, variables: list, exec_info=True):
         self.processor = processor
         self.exec_info = exec_info
         self.variables = variables
         self.fn_wrapper = processor.fn_wrapper
         self.max_len = processor.max_len
-        self.module = processor.get_ast_module()
 
     def print_execution_info(self, result, runtime):
         print(f"\n{self.fn_wrapper.debug_prefix()}")
