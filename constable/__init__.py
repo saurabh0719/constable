@@ -8,11 +8,8 @@ import time as t
 __all__ = ['trace']
 
 
-yellow = lambda x: f"\033[93m{x}\033[0m"
 green = lambda x: f"\033[92m{x}\033[0m"
-cyan = lambda x: f"\033[96m{x}\033[0m"
 blue = lambda x: f"\033[94m{x}\033[0m"
-red = lambda x: f"\033[91m{x}\033[0m"
 
 
 def trunc(s: str, max_len: int, dot=False):
