@@ -4,6 +4,8 @@
 
 <hr>
 
+> :memo: This is an experimental project that tweaks the AST. Use at your own risk in mission-critical environments, or with unknown agents, as compiling and executing code during runtime can cause unwanted side effects. For all use cases that matter, use `pdb` instead.
+<br>
 
 If you find yourself aimlessly adding :sparkles: `print` :sparkles: statements while debugging your code, this is for you. :handshake:
 
@@ -33,8 +35,6 @@ $ pip install constable
 ### How does it work?
 
 The `constable.trace` decorator uses Python's Abstract Syntax Tree (AST) in much the same way we add `print`(s) to debug states. During runtime, it prepares and inserts `print` statements into the function's AST after every assignment operation (`ast.Assign`, `ast.AugAssign` and `ast.AnnAssign`), and then executes the modified code in a separate namespace with `exec`.
-
-:memo: Use at your own risk in mission-critical environments, or with unknown agents, as compiling and executing code during runtime can cause unwanted side effects. For all use cases that matter, use `pdb` instead.
 
 #### Print variable assignments and execution info.
 
